@@ -30,51 +30,58 @@ void save_map (int h, int w, vector<vector<u_int8_t>> *img) {
     ofs.close();
 }
 
-
-//fix
 void draw_map (int window_height, int window_width, int map_height, int map_width, vector<vector<u_int8_t>>* img, string* map) {
-    vector<u_char> map_color = {255,255,255};
-    int pixel_size = window_width/map_width;
+    vector<u_int8_t> map_color = {255,255,255};
+    int pixel_size;
+    if (window_width%map_width==0 || window_width%map_width<5) {pixel_size=window_width/map_width;} 
+    else {pixel_size=window_width/map_width+1;}
 
-    int counter =0;
+    int pixelsinpixel = pixel_size*pixel_size;
+
+    int map_iterator = 0;
+    int current_y = 0;
+    int current_x = pixel_size;
+
     for (int i=0;i<map_height;i++) {
-
         for (int j=0;j<map_width;j++) {
+            if ((*map)[map_iterator] == '@'){
+                int current_verticy = current_x+current_y;
+                for(int pixel_x=0;pixel_x<pixel_size;pixel_x++) {
+                    int color_y=current_verticy + pixel_x;
+                    (*img)[current_verticy + pixel_x] = map_color;
+                    for(int pixel_y=0;pixel_y<pixel_size-1;pixel_y++) {
+                        (*img)[color_y+window_width] = map_color;
+                        color_y += window_width;
+                    }
 
-            if ((*map)[counter] == '@'){
-                cout << "@: " << (window_height*pixel_size + i*pixel_size) <<  endl;
-                (*img)[(window_height*pixel_size) + i] = map_color;
-
+                }
             }
-            counter++;
+            current_x += pixel_size;
+            map_iterator++;
         }
-
+        current_x = 0;
+        current_y += window_width*pixel_size;
     }
 }
   
-/*
-for (int i=0;i<size(*img);i+=pixel_size) {
-        if ((*map)[count] == '@'){
-            if((*img)[i] != map_color) {
-                (*img)[i] = map_color;
-                (*img)[i+1] = map_color;
-                (*img)[i+map_width] = map_color;
-                (*img)[i+map_width+1] = map_color;
-            }
-        }       
-        count++;    
-    }
-*/
 
 int main(){
     string map = 
-        "     "
-        " @@@ "
-        " @ @ "
-        " @@@ "
-        "     ";
-    int map_width = 5;
-    int map_height = 5;
+        "          "
+        " @@@@@@@@ "
+        " @  @     "
+        " @  @     "
+        " @  @     "
+        " @  @     "
+        " @@@     @"
+        "          "
+        "          "
+        "          "
+        " @@@     @"
+        "          "
+        "          ";
+    int map_width = 10;
+    int map_height = 10;
 
 
     int window_height = 10;

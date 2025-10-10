@@ -1,48 +1,72 @@
 #include <iostream>
+#include <unordered_map>
 #include <cstdint>
 #include <fstream>
 #include <vector>
 #include <string>
 
+#include <sstream>
+
 using namespace std;
 
-string map = 
-"                        "
-"  @@@@@@@@@@@@@@@@@@@@  "
-"  @                  @  "
-"  @                  @  "
-"  @                  @  "
-"  @                  @  "
-"  @                  @  "
-"  @                  @  "
-"  @@@@@@@@@@@@@@@@@@@@  "
-"                        ";
 
-int map_width = 24;
-int map_height = 10;
-
-void draw_ppm (u_int16_t h, u_int16_t w, vector<u_int16_t> img) {
-    ofstream ofs ("map.ppm", std::ios::binary);
+string rgb2hex (vector <int> rgb) {
+    vector<char> hex = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
+    string hexCode;
+    for (int i=0;i<3;i++){ hexCode += hex[int(rgb[i]/16)]; hexCode += hex[(rgb[i]%16)]; }
+    return hexCode;
+}
+vector<u_int8_t> hex2rgb (string hexCode) {
+    unordered_map<char,u_int8_t> hex = {{'0',0},{'1',1},{'2',2},{'3',3},{'4',4},{'5',5},{'6',6},
+    {'7',7},{'8',8},{'9',9},{'a',10},{'b',11},{'c',12},{'d',13},{'e',14},{'f',15}};
+    vector<u_int8_t> rgb(3);
+    for (int i=0;i<3;i++) { rgb[i] = u_int8_t((hex[hexCode[i*2]]*16)+hex[hexCode[i*2+1]]); }
+    return rgb;
+}
+void save_map (int h, int w, vector<vector<u_int8_t>> *img) {
+    ofstream ofs ("map.ppm", ios::binary);
     ofs << "P6\n" << h << " " << w << "\n255\n";
-    float adder = 0;
-    vector<uint8_t> rgb = {0,0,255}; //rgb[0]=red rgb[1]=blue rgb[2]=green
-    for (int i=0;i<size(img);i++) {
-        ofs << rgb[0] << rgb[1] << rgb[2];  
-        if (adder >= 1) {
-            if (rgb[0]>255){rgb[0]=255;} else {rgb[0]+=1;}
-            if (rgb[1]>255){rgb[1]=255;} else {rgb[1]+=0;}
-            if (rgb[2]>255){rgb[2]=255;} else {rgb[2]-=1;}
-            adder = 0;
-        } else {adder += (255/float(size(img)));}
-    }
+    for (int i=0;i<h*w;i++) { ofs << (*img)[i][0] << (*img)[i][1] << (*img)[i][2]; }
     ofs.close();
 }
 
-int main(){
-    u_int16_t height = 512;
-    u_int16_t width = 512;
+void draw_map (int window_height, int window_width, int map_height, int map_width, vector<vector<u_int8_t>>* img, string* map) {
+    vector<u_int8_t> map_color = {255,255,255};
+    int pixel_size;
+    if (window_width%map_width==0 || window_width%map_width<5) {pixel_size=window_width/map_width;} 
+    else {pixel_size=window_width/map_width+1;}
 
-    vector<u_int16_t> framebuffer(height*width, 0);
-    draw_ppm(height,width,framebuffer);
+    int pixelsinpixel = pixel_size*pixel_size;
+
+    int map_iterator = 0;
+    int current_y = 0;
+    int current_x = pixel_size;
+
+    for (int i=0;i<map_height;i++) {
+        for (int j=0;j<map_width;j++) {
+            if ((*map)[map_iterator] == '@'){
+                int current_verticy = current_x+current_y;
+                for(int pixel_x=0;pixel_x<pixel_size;pixel_x++) {
+                    int color_y=current_verticy + pixel_x;
+                    (*img)[current_verticy + pixel_x] = map_color;
+                    for(int pixel_y=0;pixel_y<pixel_size-1;pixel_y++) {
+                        (*img)[color_y+window_width] = map_color;
+                        color_y += window_width;
+                    }
+
+                }
+            }
+            current_x += pixel_size;
+            map_iterator++;
+        }
+        current_x = 0;
+        current_y += window_width*pixel_size;
+    }
+}
+  
+
+int main(){
+
+
     return 0;
 }
