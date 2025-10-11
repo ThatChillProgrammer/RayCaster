@@ -29,7 +29,6 @@ void save_map (int h, int w, vector<vector<u_int8_t>> *img) {
     for (int i=0;i<h*w;i++) { ofs << (*img)[i][0] << (*img)[i][1] << (*img)[i][2]; }
     ofs.close();
 }
-
 void draw_map (int window_height, int window_width, int map_height, int map_width, vector<vector<u_int8_t>>* img, string* map) {
     vector<u_int8_t> map_color = {255,255,255};
     int pixel_size;
@@ -65,7 +64,9 @@ void draw_map (int window_height, int window_width, int map_height, int map_widt
 }
   
 
+
 int main(){
+
 
 
     return 0;

@@ -10,85 +10,107 @@
 using namespace std;
 
 
-string rgb2hex (vector <int> rgb) {
-    vector<char> hex = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
-    string hexCode;
-    for (int i=0;i<3;i++){ hexCode += hex[int(rgb[i]/16)]; hexCode += hex[(rgb[i]%16)]; }
-    return hexCode;
+int rgb2hex (u_int8_t r,u_int8_t g,u_int8_t b) {
+    return  int((r<<16) + (g<<8) + (b));
 }
-vector<u_int8_t> hex2rgb (string hexCode) {
-    unordered_map<char,u_int8_t> hex = {{'0',0},{'1',1},{'2',2},{'3',3},{'4',4},{'5',5},{'6',6},
-    {'7',7},{'8',8},{'9',9},{'a',10},{'b',11},{'c',12},{'d',13},{'e',14},{'f',15}};
-    vector<u_int8_t> rgb(3);
-    for (int i=0;i<3;i++) { rgb[i] = u_int8_t((hex[hexCode[i*2]]*16)+hex[hexCode[i*2+1]]); }
-    return rgb;
+vector<u_int8_t> hex2rgb (int hexCode) {
+    vector<u_int8_t> ret_vector(3);
+    ret_vector[0] = u_int8_t((hexCode)>>16);
+    ret_vector[1] = u_int8_t((hexCode - (ret_vector[0]<<16))>>8);
+    ret_vector[2] = u_int8_t(hexCode - ((ret_vector[0]<<16) + ((ret_vector[1]<<8))));
+    return ret_vector;
 }
-void save_map (int h, int w, vector<vector<u_int8_t>> *img) {
+void save_map (int h, int w, vector<vector<int>> *img) {
     ofstream ofs ("map.ppm", ios::binary);
     ofs << "P6\n" << h << " " << w << "\n255\n";
-    for (int i=0;i<h*w;i++) { ofs << (*img)[i][0] << (*img)[i][1] << (*img)[i][2]; }
+    for (int i=0;i<h;i++) { 
+        for (int j=0;j<w;j++) { vector<u_int8_t> temp = hex2rgb((*img)[i][j]); ofs << temp[0] << temp[1] << temp[2]; }
+    }
     ofs.close();
 }
-
-void draw_map (int window_height, int window_width, int map_height, int map_width, vector<vector<u_int8_t>>* img, string* map) {
-    vector<u_int8_t> map_color = {255,255,255};
-    int pixel_size;
-    if (window_width%map_width==0 || window_width%map_width<5) {pixel_size=window_width/map_width;} 
-    else {pixel_size=window_width/map_width+1;}
-
-    int pixelsinpixel = pixel_size*pixel_size;
-
-    int map_iterator = 0;
-    int current_y = 0;
-    int current_x = pixel_size;
-
-    for (int i=0;i<map_height;i++) {
-        for (int j=0;j<map_width;j++) {
-            if ((*map)[map_iterator] == '@'){
-                int current_verticy = current_x+current_y;
-                for(int pixel_x=0;pixel_x<pixel_size;pixel_x++) {
-                    int color_y=current_verticy + pixel_x;
-                    (*img)[current_verticy + pixel_x] = map_color;
-                    for(int pixel_y=0;pixel_y<pixel_size-1;pixel_y++) {
-                        (*img)[color_y+window_width] = map_color;
-                        color_y += window_width;
+void draw_map (int window_height, int window_width, int map_height, int map_width, vector<vector<int>>* img, vector<string>* map) {
+    int scaling = window_width/map_height;     //PROBLEM: window and height should have diff scacling value 
+    for(int row=0;row<map_height;row++) {
+        for(int col=0;col<map_width;col++) {
+            if ((*map)[row][col] != ' ') {
+                (*img)[row*scaling][col*scaling] = rgb2hex(255,255,255);
+                for(int i=0;i<scaling;i++) {
+                    for(int j=0;j<scaling;j++) {
+                        (*img)[row*scaling+i][col*scaling+j] = rgb2hex(255,255,255);
                     }
-
                 }
             }
-            current_x += pixel_size;
-            map_iterator++;
         }
-        current_x = 0;
-        current_y += window_width*pixel_size;
     }
 }
-  
+
+
+
+void draw_entity (float ent_x,float ent_y,int window_height, int window_width,vector<vector<int>>* img) {
+    float COORDINATES_MIN = 0;
+    float COORDINATES_MAX = 64;
+    float scaling = window_height/COORDINATES_MAX;
+    float scale_down = 1-COORDINATES_MAX/float(window_height);
+    //for(int row=0;row<COORDINATES_MAX;row++) {for(int col=0;col<COORDINATES_MAX;col++) {}}
+
+    (*img)[ent_x*scaling][ent_y*scaling]=rgb2hex(0,0,0);
+
+
+
+    
+
+}
+
+
+
+
 
 int main(){
-    string map = 
-        "          "
-        " @@@@@@@@ "
-        " @  @     "
-        " @  @     "
-        " @  @     "
-        " @  @     "
-        " @@@     @"
-        "          "
-        "          "
-        "          "
-        " @@@     @"
-        "          "
-        "          ";
-    int map_width = 10;
-    int map_height = 10;
 
+    unordered_map<int,char> int2char = {{1,'1'},{2,'2'},{3,'3'},{4,'4'},{5,'5'},{6,'6'},{7,'7'},{8,'8'},{9,'9'},{0,'0'}};
 
-    int window_height = 10;
-    int window_width = 10;
-    vector<vector<u_int8_t>> framebuffer(window_height*window_width, {255,0,0});
-    draw_map(window_height,window_width,map_height,map_width,&framebuffer,&map);
+    vector<string> vectorMap = {
+        "0000222222220000",
+        "1              0",
+        "1      11111   0",
+        "1     0        0",
+        "0     0  1110000",
+        "0     3        0",
+        "0   10000      0",
+        "0   0   11100  0",
+        "0   0   0      0",
+        "0   0   1  00000",
+        "0       1      0",
+        "2       1      0",
+        "0       0      0",
+        "0 0000000      0",
+        "0              0",
+        "0002222222200000"
+    };
+    int map_height = size(vectorMap);
+    int map_width = vectorMap[0].size();
+    int window_height = 512;
+    int window_width = 512;
+    vector<int> innerList(window_width,0);
+    vector<vector<int>> framebuffer(window_height,innerList);
+
+    for (int row=0;row<(window_height);row++) {
+        for (int col=0;col<(window_width);col++) { framebuffer[row][col] = rgb2hex(255,0,0); }
+    }
+    draw_map(window_height,window_width,map_height,map_width,&framebuffer,&vectorMap);
+
+    int player_x = 0;
+    int player_y = 0;
+   
+    for (float player_pos_y=0;player_pos_y<64;player_pos_y+=0.25){
+        for (float player_pos_x=0;player_pos_x<64;player_pos_x+=0.25){
+            draw_entity(player_pos_x,player_pos_y,window_height,window_width,&framebuffer);
+        }
+    }
+
     save_map(window_height,window_width,&framebuffer);
+    
+    
 
     return 0;
 }
