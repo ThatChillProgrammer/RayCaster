@@ -1,11 +1,14 @@
+#define _USE_MATH_DEFINES
+
 #include <iostream>
 #include <unordered_map>
 #include <cstdint>
 #include <fstream>
 #include <vector>
 #include <string>
+#include <cmath>
+#include <chrono>
 
-#include <sstream>
 
 using namespace std;
 
@@ -29,14 +32,15 @@ void save_map (int h, int w, vector<vector<int>> *img) {
     ofs.close();
 }
 void draw_map (int window_height, int window_width, int map_height, int map_width, vector<vector<int>>* img, vector<string>* map) {
-    int scaling = window_width/map_height;     //PROBLEM: window and height should have diff scacling value 
+    int scaling = window_width/map_height;     
+    int white = rgb2hex(255,255,255);
     for(int row=0;row<map_height;row++) {
         for(int col=0;col<map_width;col++) {
             if ((*map)[row][col] != ' ') {
-                (*img)[row*scaling][col*scaling] = rgb2hex(255,255,255);
+                (*img)[row*scaling][col*scaling] = white;
                 for(int i=0;i<scaling;i++) {
                     for(int j=0;j<scaling;j++) {
-                        (*img)[row*scaling+i][col*scaling+j] = rgb2hex(255,255,255);
+                        (*img)[row*scaling+i][col*scaling+j] = white;
                     }
                 }
             }
@@ -46,19 +50,44 @@ void draw_map (int window_height, int window_width, int map_height, int map_widt
 
 
 
-void draw_entity (float ent_x,float ent_y,int window_height, int window_width,vector<vector<int>>* img) {
+vector<int> draw_entity (float ent_x,float ent_y,float ent_a,int window_height, int window_width,vector<vector<int>>* img) {
+    float fov = 30;
     float COORDINATES_MIN = 0;
     float COORDINATES_MAX = 64;
     float scaling = window_height/COORDINATES_MAX;
-    float scale_down = 1-COORDINATES_MAX/float(window_height);
-    //for(int row=0;row<COORDINATES_MAX;row++) {for(int col=0;col<COORDINATES_MAX;col++) {}}
+    float entity_pixel_size = (float(window_height))*(0.01);
+    vector<u_int8_t> check = {255,255,255};
+    int color = rgb2hex(128,128,128);
 
-    (*img)[ent_x*scaling][ent_y*scaling]=rgb2hex(0,0,0);
+    int cur_e_x = ent_x*scaling;
+    int cur_e_y = ent_y*scaling;
 
+    float distance = 0;
+    float component_x = 0;
+    float component_y = 0;  
 
+    float fov_bound = ent_a+fov;
+    int count=0;
 
-    
-
+    vector<int> distances;
+    for (int i=0;i<256;i++){
+        for (int j=0;j<256;j++){
+            count++;
+            if (hex2rgb((*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y])==check){
+                break;
+            }
+            (*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y]=color;
+            distance+=1;
+            component_x = distance*sin(fov_bound * M_PI/180);
+            component_y = distance*cos(fov_bound * M_PI/180);
+        }
+        distances.push_back(distance);
+        distance=0;
+        component_x=0;
+        component_y=0;
+        fov_bound-=0.117188;
+    }
+    return distances;
 }
 
 
@@ -99,18 +128,26 @@ int main(){
     }
     draw_map(window_height,window_width,map_height,map_width,&framebuffer,&vectorMap);
 
-    int player_x = 0;
-    int player_y = 0;
-   
-    for (float player_pos_y=0;player_pos_y<64;player_pos_y+=0.25){
-        for (float player_pos_x=0;player_pos_x<64;player_pos_x+=0.25){
-            draw_entity(player_pos_x,player_pos_y,window_height,window_width,&framebuffer);
-        }
-    }
+    float player_x = 10;
+    float player_y = 15;
+    float player_angle = 75;
 
+    
+
+    
+    //auto start = chrono::high_resolution_clock::now();
+    vector<int> distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer);
+    for (int i=0;i<size(distances);i++){
+        cout << distances[i] << endl;
+    }
+    
     save_map(window_height,window_width,&framebuffer);
+
     
-    
+
+    //auto stop = chrono::high_resolution_clock::now();
+    //auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+    //cout << duration.count();
 
     return 0;
 }
