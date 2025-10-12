@@ -51,7 +51,7 @@ void draw_map (int window_height, int window_width, int map_height, int map_widt
                 for(int i=0;i<scaling;i++) {
                     for(int j=0;j<scaling;j++) {
                         (*img)[row*scaling+i][col*scaling+j] = white;
-                        if((*map)[row][col] == '1'){(*img)[row*scaling+i][col*scaling+j] = blue;cout<<"blue"<<endl;}
+                        if((*map)[row][col] == '1'){(*img)[row*scaling+i][col*scaling+j] = blue;}
                     }
                 }
             }
@@ -60,17 +60,15 @@ void draw_map (int window_height, int window_width, int map_height, int map_widt
 }
 vector<vector<int>> draw_entity (float ent_x,float ent_y,float ent_a,int window_height, int window_width,vector<vector<int>>* img) {
     float fov = 30;
-    float COORDINATES_MIN = 0;
     float COORDINATES_MAX = 64;
     float scaling = window_height/COORDINATES_MAX;
-    float entity_pixel_size = (float(window_height))*(0.01);
     vector<u_int8_t> white = {255,255,255};
     vector<u_int8_t> blue = {0,0,255};
     int color = rgb2hex(128,128,128);
 
     int cur_e_x = ent_x*scaling;
     int cur_e_y = ent_y*scaling;
-
+    cout << cur_e_x << " " << cur_e_y << endl;
     vector<int> distance = {0,0};
     float component_x = 0;
     float component_y = 0;  
@@ -82,17 +80,17 @@ vector<vector<int>> draw_entity (float ent_x,float ent_y,float ent_a,int window_
     for (int i=0;i<512;i++){
         for (int j=0;j<512;j++){
             count++;
-            if (hex2rgb((*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y])==white ) {
+            if (hex2rgb((*img)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x])==white ) {
                 distance[1] = rgb2hex(0,255,255);
                 distances.push_back(distance);
                 break;
             }
-            if (hex2rgb((*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y])==blue){
+            if (hex2rgb((*img)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x])==blue){
                 distance[1] = rgb2hex(0,0,255);
                 distances.push_back(distance);
                 break;
             }
-            (*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y]=color;
+            (*img)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]=color;
             distance[0]+=1;
             component_x = distance[0]*sin(fov_bound * M_PI/180);
             component_y = distance[0]*cos(fov_bound * M_PI/180);
@@ -108,19 +106,19 @@ vector<vector<int>> draw_entity (float ent_x,float ent_y,float ent_a,int window_
 void draw_3d (int height, int width, vector<vector<int>>* distances, vector<vector<int>>* img) {
     int color = rgb2hex(255,0,0);
     int othCOl = rgb2hex(255,255,255);
-    cout << size(*distances) << endl;
+    int reverse_list = 511;
     for (int i=0;i<width;i++) {
-
-        int object_size = (height/(*distances)[i][0]);
+        int object_size = (height/(*distances)[reverse_list][0])*3;
         int start_drawing = (height-object_size)/2;
         int stop_drawing = 2;
-        //cout << (*distances)[i][1] << " " << object_size << " " << start_drawing << endl;
-        
+        //cout << reverse_list << " " << object_size << " " << (*distances)[reverse_list][0] << endl;
+
         for (int j=0;j<height;j++) {
             if(j>=start_drawing && j<=start_drawing+object_size ){
-                (*img)[j][i] = (*distances)[i][1];
+                (*img)[j][i] = (*distances)[reverse_list][1];
             } else { (*img)[j][i] = othCOl; }
         }
+        reverse_list-=1;
     }
 }
 
@@ -135,7 +133,7 @@ int main(){
     vector<string> vectorMap = {
         "0000222222220000",
         "1              0",
-        "1      11111   0",
+        "1     111111   0",
         "1     0        0",
         "0     0  1110000",
         "0     3        0",
@@ -162,9 +160,9 @@ int main(){
     }
     draw_map(window_height,window_width,map_height,map_width,&framebuffer,&vectorMap);
 
-    float player_x = 10;
-    float player_y = 15;
-    float player_angle = 75;
+    float player_x = 55;
+    float player_y = 55;
+    float player_angle = 180;
 
     
 
