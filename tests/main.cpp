@@ -31,63 +31,97 @@ void save_map (int h, int w, vector<vector<int>> *img) {
     }
     ofs.close();
 }
+void save_map1 (int h, int w, vector<vector<int>> *img) {
+    ofstream ofs ("map1.ppm", ios::binary);
+    ofs << "P6\n" << h << " " << w << "\n255\n";
+    for (int i=0;i<h;i++) { 
+        for (int j=0;j<w;j++) { vector<u_int8_t> temp = hex2rgb((*img)[i][j]); ofs << temp[0] << temp[1] << temp[2]; }
+    }
+    ofs.close();
+}
 void draw_map (int window_height, int window_width, int map_height, int map_width, vector<vector<int>>* img, vector<string>* map) {
     int scaling = window_width/map_height;     
     int white = rgb2hex(255,255,255);
+    int blue = rgb2hex(0,0,255);
     for(int row=0;row<map_height;row++) {
         for(int col=0;col<map_width;col++) {
             if ((*map)[row][col] != ' ') {
                 (*img)[row*scaling][col*scaling] = white;
+                if((*map)[row][col] == '1'){(*img)[row*scaling][col*scaling] = blue;}
                 for(int i=0;i<scaling;i++) {
                     for(int j=0;j<scaling;j++) {
                         (*img)[row*scaling+i][col*scaling+j] = white;
+                        if((*map)[row][col] == '1'){(*img)[row*scaling+i][col*scaling+j] = blue;cout<<"blue"<<endl;}
                     }
                 }
             }
         }
     }
 }
-
-
-
-vector<int> draw_entity (float ent_x,float ent_y,float ent_a,int window_height, int window_width,vector<vector<int>>* img) {
+vector<vector<int>> draw_entity (float ent_x,float ent_y,float ent_a,int window_height, int window_width,vector<vector<int>>* img) {
     float fov = 30;
     float COORDINATES_MIN = 0;
     float COORDINATES_MAX = 64;
     float scaling = window_height/COORDINATES_MAX;
     float entity_pixel_size = (float(window_height))*(0.01);
-    vector<u_int8_t> check = {255,255,255};
+    vector<u_int8_t> white = {255,255,255};
+    vector<u_int8_t> blue = {0,0,255};
     int color = rgb2hex(128,128,128);
 
     int cur_e_x = ent_x*scaling;
     int cur_e_y = ent_y*scaling;
 
-    float distance = 0;
+    vector<int> distance = {0,0};
     float component_x = 0;
     float component_y = 0;  
 
     float fov_bound = ent_a+fov;
     int count=0;
 
-    vector<int> distances;
-    for (int i=0;i<256;i++){
-        for (int j=0;j<256;j++){
+    vector<vector<int>> distances;
+    for (int i=0;i<512;i++){
+        for (int j=0;j<512;j++){
             count++;
-            if (hex2rgb((*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y])==check){
+            if (hex2rgb((*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y])==white ) {
+                distance[1] = rgb2hex(0,255,255);
+                distances.push_back(distance);
+                break;
+            }
+            if (hex2rgb((*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y])==blue){
+                distance[1] = rgb2hex(0,0,255);
+                distances.push_back(distance);
                 break;
             }
             (*img)[(component_x*scaling)+cur_e_x][(component_y*scaling)+cur_e_y]=color;
-            distance+=1;
-            component_x = distance*sin(fov_bound * M_PI/180);
-            component_y = distance*cos(fov_bound * M_PI/180);
+            distance[0]+=1;
+            component_x = distance[0]*sin(fov_bound * M_PI/180);
+            component_y = distance[0]*cos(fov_bound * M_PI/180);
         }
-        distances.push_back(distance);
-        distance=0;
+        distance[0]=0;
         component_x=0;
         component_y=0;
         fov_bound-=0.117188;
     }
     return distances;
+}
+
+void draw_3d (int height, int width, vector<vector<int>>* distances, vector<vector<int>>* img) {
+    int color = rgb2hex(255,0,0);
+    int othCOl = rgb2hex(255,255,255);
+    cout << size(*distances) << endl;
+    for (int i=0;i<width;i++) {
+
+        int object_size = (height/(*distances)[i][0]);
+        int start_drawing = (height-object_size)/2;
+        int stop_drawing = 2;
+        //cout << (*distances)[i][1] << " " << object_size << " " << start_drawing << endl;
+        
+        for (int j=0;j<height;j++) {
+            if(j>=start_drawing && j<=start_drawing+object_size ){
+                (*img)[j][i] = (*distances)[i][1];
+            } else { (*img)[j][i] = othCOl; }
+        }
+    }
 }
 
 
@@ -105,7 +139,7 @@ int main(){
         "1     0        0",
         "0     0  1110000",
         "0     3        0",
-        "0   10000      0",
+        "0   11100      0",
         "0   0   11100  0",
         "0   0   0      0",
         "0   0   1  00000",
@@ -114,7 +148,7 @@ int main(){
         "0       0      0",
         "0 0000000      0",
         "0              0",
-        "0002222222200000"
+        "1111122222200000"
     };
     int map_height = size(vectorMap);
     int map_width = vectorMap[0].size();
@@ -136,13 +170,15 @@ int main(){
 
     
     //auto start = chrono::high_resolution_clock::now();
-    vector<int> distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer);
-    for (int i=0;i<size(distances);i++){
-        cout << distances[i] << endl;
-    }
-    
+    vector<vector<int>> distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer);
+    //for (int i=0;i<size(distances);i++){
+    //    cout << distances[i] << endl;
+    //}    
     save_map(window_height,window_width,&framebuffer);
 
+
+    draw_3d(window_height,window_width,&distances,&framebuffer);
+    save_map1(window_height,window_width,&framebuffer);
     
 
     //auto stop = chrono::high_resolution_clock::now();
