@@ -82,11 +82,13 @@ vector<vector<float>> draw_entity (float ent_x,float ent_y,float ent_a,int windo
     int count=0;
 
     vector<vector<float>> distances;
+    
     for (int i=0;i<window_height;i++){
         for (int j=0;j<window_width;j++){
             count++;
             if (colors[(*map)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]] ) {
-                distance[1] = colors[(*img)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]];
+                distance[0] = distance[0]*cos((ent_a - fov_bound) * M_PI/180);
+                distance[1] = colors[(*map)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]];
                 distances.push_back(distance);
                 break;
             } 
@@ -108,7 +110,7 @@ void draw_3d (int height, int width, vector<vector<float>>* distances, vector<ve
     int reverse_list = size(*distances)-1;
     //cout << height << " " << (*distances)[reverse_list][0] << " " << reverse_list << endl;
     for (int i=0;i<width;i++) {
-        int object_size = (height/(*distances)[reverse_list][0])*3;
+        int object_size = (height/((*distances)[reverse_list][0]))*3;
         int start_drawing = (height-object_size)/2;
         int stop_drawing = 2;
         //cout << reverse_list << " " << object_size << " " << (*distances)[reverse_list][0] << endl;
@@ -174,10 +176,11 @@ int main(){
     
     string number = "";
     string pass2func = "";
-    vector<vector<int>> distances;
+    vector<vector<float>> distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer,&Map);
+    save_map1(window_height,window_width,&framebuffer);
     auto start = chrono::high_resolution_clock::now();
     for (int i=0;i<360;i++) {
-        vector<vector<float>> distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer,&Map);
+        distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer,&Map);
         draw_3d(window_height,window_width,&distances,&framebuffer);
         if (i>=100){number += int2char[(i/100)];}
         if (i>=10){number += int2char[(i/10)%10];}
@@ -191,7 +194,7 @@ int main(){
             pass2func += number;
         }
         if (number.size()==3){pass2func += number;}
-        //save_map(window_height,window_width,&framebuffer,pass2func);
+        save_map(window_height,window_width,&framebuffer,pass2func);
         //cout << number << endl;
         if (player_angle==360){player_angle=0;}
         player_angle +=1;
@@ -201,7 +204,7 @@ int main(){
 
     auto stop = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::seconds>(stop - start);
-    cout << duration.count();
+    cout << duration.count() << endl;
     
 
 
