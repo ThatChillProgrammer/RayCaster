@@ -9,7 +9,6 @@
 #include <cmath>
 #include <chrono>
 
-
 using namespace std;
 
 
@@ -23,12 +22,12 @@ vector<u_int8_t> hex2rgb (int hexCode) {
     ret_vector[2] = u_int8_t(hexCode - ((ret_vector[0]<<16) + ((ret_vector[1]<<8))));
     return ret_vector;
 }
-void save_map (int h, int w, vector<vector<int>> *img,string number) {
-    string map = "../images/map000.ppm";
-    map[13] = number[0];
-    map[14] = number[1];
-    map[15] = number[2];
-    //string map = "map2.ppm";
+void save_map (int h, int w, vector<vector<int>> *img) {
+    //string map = "../images/map000.ppm";
+    //map[13] = number[0];
+    //map[14] = number[1];
+    //map[15] = number[2];
+    string map = "map.ppm";
     ofstream ofs (map, ios::binary);
     ofs << "P6\n" << h << " " << w << "\n255\n";
     for (int i=0;i<h;i++) { 
@@ -37,7 +36,7 @@ void save_map (int h, int w, vector<vector<int>> *img,string number) {
     ofs.close();
 }
 void save_map1 (int h, int w, vector<vector<int>> *img) {
-    ofstream ofs ("map1.ppm", ios::binary);
+    ofstream ofs ("3dview.ppm", ios::binary);
     ofs << "P6\n" << h << " " << w << "\n255\n";
     for (int i=0;i<h;i++) { 
         for (int j=0;j<w;j++) { vector<u_int8_t> temp = hex2rgb((*img)[i][j]); ofs << temp[0] << temp[1] << temp[2]; }
@@ -47,8 +46,6 @@ void save_map1 (int h, int w, vector<vector<int>> *img) {
 void draw_map (int window_height, int window_width, int map_height, int map_width, vector<vector<int>>* img, vector<string>* map) {
     unordered_map<char,int> colors = {{'0',rgb2hex(255,255,255)},{'1',rgb2hex(0,255,255)},{'2',rgb2hex(0,255,0)},{'3',rgb2hex(0,0,255)},{'4',rgb2hex(255,0,255)}};
     int scaling = window_width/map_height;     
-    int white = rgb2hex(255,255,255);
-    int blue = rgb2hex(0,0,255);
     for(int row=0;row<map_height;row++) {
         for(int col=0;col<map_width;col++) {
             if (colors[(*map)[row][col]]) {
@@ -64,35 +61,26 @@ void draw_map (int window_height, int window_width, int map_height, int map_widt
 }
 vector<vector<float>> draw_entity (float ent_x,float ent_y,float ent_a,int window_height, int window_width,vector<vector<int>>* img,vector<vector<int>>* map) {
     unordered_map<int,int> colors = {{rgb2hex(255,255,255),rgb2hex(124,124,255)},{rgb2hex(0,255,255),rgb2hex(0,255,255)},{rgb2hex(0,255,0),rgb2hex(0,255,0)},{rgb2hex(0,0,255),rgb2hex(0,0,255)},{rgb2hex(255,0,255),rgb2hex(255,0,255)}};
+    float scaling = window_height/64;
     float fov = 30;
-    float COORDINATES_MAX = 64;
-    float scaling = window_height/COORDINATES_MAX;
-    vector<u_int8_t> white = {255,255,255};
-    vector<u_int8_t> blue = {0,0,255};
-    int color = rgb2hex(128,128,128);
-
+    float decrement = (fov*2)/window_height;
     int cur_e_x = ent_x*scaling;
     int cur_e_y = ent_y*scaling;
-    //cout << cur_e_x << " " << cur_e_y << endl;
     vector<float> distance = {0,0};
     float component_x = 0;
     float component_y = 0;  
-
     float fov_bound = ent_a+fov;
-    int count=0;
-
     vector<vector<float>> distances;
     
     for (int i=0;i<window_height;i++){
         for (int j=0;j<window_width;j++){
-            count++;
             if (colors[(*map)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]] ) {
                 distance[0] = distance[0]*cos((ent_a - fov_bound) * M_PI/180);
                 distance[1] = colors[(*map)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]];
                 distances.push_back(distance);
                 break;
             } 
-            (*img)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]=color;
+            (*img)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]=8421504;
             distance[0]+=0.1;
             component_x = distance[0]*sin(fov_bound * M_PI/180);
             component_y = distance[0]*cos(fov_bound * M_PI/180);
@@ -100,7 +88,7 @@ vector<vector<float>> draw_entity (float ent_x,float ent_y,float ent_a,int windo
         distance[0]=0;
         component_x=0;
         component_y=0;
-        fov_bound-=0.117188;
+        fov_bound-=decrement;
     }
     return distances;
 }
@@ -108,13 +96,10 @@ void draw_3d (int height, int width, vector<vector<float>>* distances, vector<ve
     int color = rgb2hex(255,0,0);
     int othCOl = rgb2hex(255,255,255);
     int reverse_list = size(*distances)-1;
-    //cout << height << " " << (*distances)[reverse_list][0] << " " << reverse_list << endl;
     for (int i=0;i<width;i++) {
-        int object_size = (height/((*distances)[reverse_list][0]))*3;
+        float object_size = (height/((*distances)[reverse_list][0]))*3;
         int start_drawing = (height-object_size)/2;
         int stop_drawing = 2;
-        //cout << reverse_list << " " << object_size << " " << (*distances)[reverse_list][0] << endl;
-
         for (int j=0;j<height;j++) {
             if(j>=start_drawing && j<=start_drawing+object_size ){
                 (*img)[j][i] = (*distances)[reverse_list][1];
@@ -129,8 +114,6 @@ void draw_3d (int height, int width, vector<vector<float>>* distances, vector<ve
 
 
 int main(){
-
-    unordered_map<int,char> int2char = {{1,'1'},{2,'2'},{3,'3'},{4,'4'},{5,'5'},{6,'6'},{7,'7'},{8,'8'},{9,'9'},{0,'0'}};
 
     vector<string> vectorMap = {
         "0000222222220000",
@@ -163,52 +146,16 @@ int main(){
     draw_map(window_height,window_width,map_height,map_width,&framebuffer,&vectorMap);
     vector<vector<int>> Map = framebuffer;
 
-    float player_x = 15;
-    float player_y = 15;
-    float player_angle = 90;
-    //vector<vector<float>> distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer,&Map);
-    //save_map1(window_height,window_width,&framebuffer);
-    //draw_3d(window_height,window_width,&distances,&framebuffer);
-    //save_map(window_height,window_width,&framebuffer,"000");
-
-
-
+    float player_x = 15;//0-64
+    float player_y = 15;//0-64
+    float player_angle = 90; //0-360
     
     string number = "";
     string pass2func = "";
     vector<vector<float>> distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer,&Map);
+    save_map(window_height,window_width,&framebuffer);
+    draw_3d(window_height,window_width,&distances,&framebuffer);
     save_map1(window_height,window_width,&framebuffer);
-    auto start = chrono::high_resolution_clock::now();
-    for (int i=0;i<360;i++) {
-        distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer,&Map);
-        draw_3d(window_height,window_width,&distances,&framebuffer);
-        if (i>=100){number += int2char[(i/100)];}
-        if (i>=10){number += int2char[(i/10)%10];}
-        if (i>=0){number += int2char[(i%10)];}
-        if (number.size()==1){
-            pass2func = "00";
-            pass2func += number;
-        }
-        if (number.size()==2){
-            pass2func = "0";
-            pass2func += number;
-        }
-        if (number.size()==3){pass2func += number;}
-        save_map(window_height,window_width,&framebuffer,pass2func);
-        //cout << number << endl;
-        if (player_angle==360){player_angle=0;}
-        player_angle +=1;
-        number ="";
-        pass2func="";
-    }   
-
-    auto stop = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::seconds>(stop - start);
-    cout << duration.count() << endl;
-    
-
-
-    
 
     return 0;
 }
