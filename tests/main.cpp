@@ -129,20 +129,17 @@ int main(){
         "0       1      0",
         "2       1      0",
         "0       0      0",
-        "0 0000444      0",
+        "0 3333333      0",
         "0              0",
         "1111122222233000"
     };
+    
     int map_height = size(vectorMap);
     int map_width = vectorMap[0].size();
     int window_height = 512;
     int window_width = 512;
-    vector<int> innerList(window_width,0);
+    vector<int> innerList(window_width,16711680);
     vector<vector<int>> framebuffer(window_height,innerList);
-
-    for (int row=0;row<(window_height);row++) {
-        for (int col=0;col<(window_width);col++) { framebuffer[row][col] = rgb2hex(255,0,0); }
-    }
     draw_map(window_height,window_width,map_height,map_width,&framebuffer,&vectorMap);
     vector<vector<int>> Map = framebuffer;
 
