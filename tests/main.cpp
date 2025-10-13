@@ -71,7 +71,7 @@ vector<vector<float>> draw_entity (float ent_x,float ent_y,float ent_a,int windo
     float component_y = 0;  
     float fov_bound = ent_a+fov;
     vector<vector<float>> distances;
-    
+    cout << decrement << endl;
     for (int i=0;i<window_height;i++){
         for (int j=0;j<window_width;j++){
             if (colors[(*map)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]] ) {
@@ -81,7 +81,7 @@ vector<vector<float>> draw_entity (float ent_x,float ent_y,float ent_a,int windo
                 break;
             } 
             (*img)[(component_x*scaling)+cur_e_y][(component_y*scaling)+cur_e_x]=8421504;
-            distance[0]+=0.1;
+            distance[0]+=decrement;
             component_x = distance[0]*sin(fov_bound * M_PI/180);
             component_y = distance[0]*cos(fov_bound * M_PI/180);
         }
@@ -100,7 +100,7 @@ void draw_3d (int height, int width, vector<vector<float>>* distances, vector<ve
         float object_size = (height/((*distances)[reverse_list][0]))*3;
         int start_drawing = (height-object_size)/2;
         int stop_drawing = 2;
-        for (int j=0;j<height;j++) {
+        for (int j=0;j<(height);j++) {
             if(j>=start_drawing && j<=start_drawing+object_size ){
                 (*img)[j][i] = (*distances)[reverse_list][1];
             } else { (*img)[j][i] = othCOl; }
@@ -140,6 +140,7 @@ int main(){
     int window_width = 512;
     vector<int> innerList(window_width,16711680);
     vector<vector<int>> framebuffer(window_height,innerList);
+
     draw_map(window_height,window_width,map_height,map_width,&framebuffer,&vectorMap);
     vector<vector<int>> Map = framebuffer;
 
