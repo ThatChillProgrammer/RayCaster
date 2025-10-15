@@ -61,14 +61,25 @@ vector<vector<int>> textureLoad(char *filename) {
     return texture;
 } 
 
-char T_filepathB[] = {"./textures/texture001.png"};
+char T_filepathB[] = {"./textures/rudy.jpg"};
 vector<vector<int>> t_brickwall = textureLoad(T_filepathB);
 
+unordered_map<char,vector<vector<int>>> LoadAllTextures (vector<string> filepaths) {
+    unordered_map<char,vector<vector<int>>> Loaded_Textures;
+    string characters = "0123456789ABCDEF";
+    string T_filepathB = filepaths[0];
+
+    for (int i=0;i<size(filepaths);i++) {
+        if (i>characters.size()) {cout << "TO MANY TEXTURES" << endl; break;}
+        char *cstr = (filepaths[i]).data();
+        char test[] = {*cstr};
+        Loaded_Textures[characters[i]] = textureLoad(cstr);
+    }
+
+    return Loaded_Textures;    
+}
+
 void save_map (int h, int w, vector<vector<int>> *img) {
-    //string map = "../images/map000.ppm";
-    //map[13] = number[0];
-    //map[14] = number[1];
-    //map[15] = number[2];
     string map = "./images/map.ppm";
     ofstream ofs (map, ios::binary);
     ofs << "P6\n" << h << " " << w << "\n255\n";
@@ -98,56 +109,71 @@ void draw_map (int window_height, int window_width, int map_height, int map_widt
                     }
                 }
             }
-            (*img)[row*scaling][col*scaling] = colors['5'];
+            //(*img)[row*scaling][col*scaling] = colors['5'];
         }
     }
 }
-vector<vector<float>> draw_entity (float ent_x,float ent_y,float ent_a,int window_height, int window_width,vector<vector<int>>* img,vector<vector<int>>* map) {
+void getTextureSlice(float ent_a, float fov_bound, float c_x, float c_y, int current_block_x, int current_block_y, int last_block_y,vector<float> &distance, int window_height, int window_width, vector<vector<float>> &distances)  {
+    if (last_block_y == current_block_y) {distance[1] = ((c_y-current_block_y)*(64/(window_height/size(vectorMap))));
+    } else {  distance[1] = ((c_x-current_block_x)*(64/(window_width/size(vectorMap[0]))));}
+    distance[0] = distance[0]*cos((ent_a - fov_bound) * M_PI/180);
+    distances.push_back(distance);
+}
+void zeroAngleVars(vector<float> &distance, vector<float> &ray_components) {
+    distance[0]=0;
+    ray_components[0]=0;
+    ray_components[1]=0;
+}
+
+vector<vector<float>> compute_player_view (float ent_x,float ent_y,float ent_a,int window_height, int window_width,vector<vector<int>>* img,vector<vector<int>>* map) {
     unordered_map<int,int> colors = {{rgb2hex(255,255,255),1},{rgb2hex(0,255,255),2},{rgb2hex(0,255,0),3},{rgb2hex(0,0,255),rgb2hex(0,0,255)},{rgb2hex(255,0,255),rgb2hex(255,0,255)}};
-    float scaling = window_height/64;
-    float fov = 30;
-    float decrement = (fov*2)/window_height;
-    int cur_e_x = ent_x*scaling;
-    int cur_e_y = ent_y*scaling;
-    vector<float> distance = {0,0,0};
-    float component_x = 0;
-    float component_y = 0;  
-    float fov_bound = ent_a+fov;
+    vector<float> distance = {0,0};
     vector<vector<float>> distances;
-    int last_blockx=0;
-    int last_blocky=0;
+
+    float scaling = window_height/64;
+
+    float fov = 30;
+    float fov_bound = ent_a+fov;
+    float decrement = (fov*2)/window_height;
+
+    int player_pos_x = ent_x*scaling;
+    int player_pos_y = ent_y*scaling;
+    
+    vector<float> ray_components = {0,0}; // (ray_x,ray_y)
+    
+    int last_block_y=0;
 
     for (int i=0;i<window_height;i++){
+
+        float sinCalculation = sin(fov_bound * M_PI/180);
+        float cosCalculation = cos(fov_bound * M_PI/180);
+
         for (int j=0;j<window_width;j++){
-            float c_y = (component_x*scaling)+cur_e_y;
-            float c_x = (component_y*scaling)+cur_e_x;
-            int current_block_x = int((c_x)/(window_width/16))*32;
-            int current_block_y = int((c_y)/(window_width/16))*32;
-            if (colors[(*map)[c_y][c_x]]) {     
-                int texture_bit;
-                if (last_blocky == current_block_y) {texture_bit = c_y-current_block_y;} 
-                else {texture_bit = (c_x-current_block_x);}
-                distance[0] = distance[0]*cos((ent_a - fov_bound) * M_PI/180);
-                distance[1] = colors[(*map)[c_y][c_x]];
-                distance[2] = texture_bit;
-                distances.push_back(distance);
+
+            float c_y = (ray_components[0]*scaling)+player_pos_y;
+            float c_x = (ray_components[1]*scaling)+player_pos_x;
+
+            int current_block_y = int((c_y)/(window_height/size(vectorMap)))*(window_height/size(vectorMap[0]));
+
+            if (colors[(*map)[c_y][c_x]]) { 
+                getTextureSlice(ent_a,fov_bound,c_x, c_y, int((c_x)/(window_width/size(vectorMap[0])))*(window_width/size(vectorMap)), current_block_y, last_block_y,distance, window_height,window_width,distances);
                 break;
             } 
+
             (*img)[c_y][c_x]=8421504;
+
             distance[0]+=decrement;
-            component_x = distance[0]*sin(fov_bound * M_PI/180);
-            component_y = distance[0]*cos(fov_bound * M_PI/180);
-            last_blockx = current_block_x;
-            last_blocky = current_block_y;
+            ray_components[0] = distance[0]*sinCalculation;
+            ray_components[1] = distance[0]*cosCalculation;
+            last_block_y = current_block_y;
         }
-        distance[0]=0;
-        component_x=0;
-        component_y=0;
+        zeroAngleVars(distance, ray_components);
         fov_bound-=decrement;
     }
     return distances;
 }
-void draw_3d (int height, int width, vector<vector<float>>* distances, vector<vector<int>>* img) {
+
+void draw_player_view (int height, int width, vector<vector<float>>* distances, vector<vector<int>>* img) {
     int color = rgb2hex(100,100,100);
     int othCOl = rgb2hex(128,0,32);
     int reverse_list = size(*distances)-1;
@@ -155,8 +181,10 @@ void draw_3d (int height, int width, vector<vector<float>>* distances, vector<ve
         float object_size = (height/((*distances)[reverse_list][0]))*3;
         int start_drawing = (height-object_size)/2;
         float scaling = 64/((start_drawing+object_size)-start_drawing);
-        for (int j=0;j<(512);j++) {
-            if(j>=start_drawing && j<=start_drawing+object_size ){(*img)[j][i] = t_brickwall[int(-(scaling*((start_drawing)-j)))][(*distances)[reverse_list][2]];} 
+        for (int j=0;j<height;j++) {
+            if(j>=start_drawing && j<=start_drawing+object_size ){
+                (*img)[j][i] = t_brickwall[int(-(scaling*((start_drawing)-j)))][(*distances)[reverse_list][1]];
+            } 
             else if (j>=start_drawing) { (*img)[j][i] = othCOl; }
             else if(j<=start_drawing+object_size ){(*img)[j][i] = color;}
         }
@@ -164,12 +192,10 @@ void draw_3d (int height, int width, vector<vector<float>>* distances, vector<ve
     }
 }
 
-
-
-
-
 int main(){
-    
+    vector<string> filepaths = {"./textures/texture001.png","./textures/ivan.jpg","./textures/rudy.jpg","./textures/quent.jpg"};
+    unordered_map<char,vector<vector<int>>> textures = LoadAllTextures(filepaths);
+
     int map_height = size(vectorMap);
     int map_width = vectorMap[0].size();
     int window_height = 512;
@@ -183,12 +209,10 @@ int main(){
     float player_x = 15;//0-64
     float player_y = 15;//0-64
     float player_angle = 90; //0-360
-    
-    string number = "";
-    string pass2func = "";
-    vector<vector<float>> distances = draw_entity(player_x,player_y,player_angle,window_height,window_width,&framebuffer,&Map);
+
+    vector<vector<float>> distances = compute_player_view(player_x,player_y,player_angle,window_height,window_width,&framebuffer,&Map);
     save_map(window_height,window_width,&framebuffer);
-    draw_3d(window_height,window_width,&distances,&framebuffer);
+    draw_player_view(window_height,window_width,&distances,&framebuffer);
     save_map1(window_height,window_width,&framebuffer);
 
     return 0;
